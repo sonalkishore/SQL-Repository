@@ -1,0 +1,340 @@
+Division (DID, dname, managerID)
+Employee (empID, name, salary, DID)
+Project (PID, pname, budget, DID)
+Workon (PID, EmpID, hours)
+
+
+1.	List the name and salary of employees who do not work in division 5. 
+
+Select name, salary 
+from employee 
+where division != 5
+
+NAME	SALARY
+kevin	32000
+brian	37000
+smith	39000
+joan	42000
+peter	45000
+austin	46000
+smith	46000
+joan	48000
+kim	49000
+Nacy	52000
+John	52000
+Kristie	52000
+grace	62000
+Justin	62000
+Alan	62000
+peter	68000
+Alex	69000
+Jenna	69000
+Julia	69000
+chen	71000
+Sandra	72000
+Phil	72000
+Joe	74000
+Steve	74000
+harry	92000
+
+
+2.	List the total number of employees whose name’s second letter is ‘a’ for each division, including division ID
+
+Select did, count(*) 
+from employee 
+where name like '_a%'
+group by did
+
+DID	COUNT(*)
+1	1
+5	4
+4	2
+
+
+
+3.	List the total project budget for each division, including division ID.
+
+Select did, sum(budget) 
+from Project
+group by did
+
+DID	SUM(BUDGET)
+1	12000
+2	14000
+4	6000
+3	5000
+
+
+4.	List the ID of the division that has two or more projects with a budget over $5000.
+
+select did, count(*)
+from project
+where budget >5000
+group by did
+having count(*) >=2
+
+DID	COUNT(*)
+2	2
+
+
+5.	List the total number of projects each employee works on, including employee's ID and total hours an employee spent on the project.
+
+select empid, sum(hours), count(pid)
+from workon
+group by empid
+order by empid
+
+EMPID	SUM(HOURS)	COUNT(PID)
+1	30		1
+3	300		4
+4	105		3
+5	30		1
+6	165		4
+7	90		3
+8	120		4
+9	180		6
+12	30		1
+13	30		1
+14	20		1
+15	40		1
+16	60		2
+17	30		1
+18	30		1
+19	60		2
+21	60		2
+22	70		2
+23	30		1
+24	20		1
+25	70		2
+26	110		4
+27	70		2
+28	60		2
+29	30		1
+30	100		3
+
+
+6.	Visit https://www.w3schools.com/sql/sql_top.asp and (a) study the SQL select statements for different DBMS for listing “top” rows that meet some query condition(s). Then (b) list the top 3 highest-paid employees, showing DID, EmpID,  name and salary. Note this exercise is to let you be aware that some SQL functions/syntaxes may vary for different DMBSs (and their versions). 
+
+SELECT * 
+FROM (SELECT * FROM employee ORDER BY salary desc)
+WHERE ROWNUM <= 3
+
+EMPID	NAME	SALARY	DID
+5	harry	92000	4
+4	larry	82000	5
+23	Steve	74000	4
+
+
+
+ (Query on Multiple Tables)  
+
+7.	For each project, list its name and total number of employees who work on that project.
+
+select p.pname, count(w.empid) 
+from project p join workon w 
+on p.pid = w.pid 
+group by p.pname
+
+PNAME		COUNT(W.EMPID)
+DB development		8
+security system		6
+network development	13
+Wireless development	12
+system development	6
+Web development		11
+
+
+
+8.	List the total number of projects that have employee(s) who work on it make less than $50k. (Hint: You need to use keyword DISTINCT in this query. Can you tell me why?).
+
+Select count(distinct(p.pid)) as "Total Number Of Projects"
+from project p
+join workon w on p.pid = w.pid
+join employee e on w.empid = e.empid
+where e.salary < 50000
+
+Total Number Of Projects
+6
+
+Keyword "DISTINCT" ensures that each project is counted only once, regardless of how many employees working on it earn < $50,000
+
+
+
+9.	List the name and ID of employees that worked on more than 3 projects.  
+
+select e.empid, e.name
+from employee e, workon w
+where e.empid = w.empid
+group by e.empid, e.name
+having count(distinct w.pid) > 3
+
+EMPID	NAME
+6	peter
+8	smith
+26	Julia
+3	brian
+9	chen
+
+
+10.	List the total number of project each employee works on, including employee's name (note : Your code should account for situations where multiple employees may have the same name and where some employees might not work on any project). 
+
+
+select distinct(e.name), count(w.pid) AS "Total Number of Projects"
+from employee e, workon w
+where e.empid=w.empid 
+group by e.empid, e.name
+
+NAME	Total Number of Projects
+peter	4
+karl	1
+Kristie	2
+Nacy	1
+Marilyn	1
+harry	1
+Joe	2
+smith	4
+austin	1
+peter	3
+Alan	2
+Julia	4
+larry	3
+grace	3
+Justin	2
+joan	1
+Alex	2
+Steve	1
+kevin	1
+kim	1
+brian	4
+Phil	2
+Jenna	1
+sam	1
+Sandra	2
+chen	6
+
+
+
+
+
+11.	List the total number of employees who work on project 'Web development'.  Also list the total working hours for this project.
+
+select count(e.empid), sum(w.hours)
+from employee e, project p, workon w
+where e.empid = w.empid and w.pid=p.pid
+and lower(pname)= 'web development'
+
+COUNT(E.EMPID)	SUM(W.HOURS)
+11	  	390
+
+
+12.	List the name of the project that 'chen' works on. (Hint: join 3 tables)
+
+select p.pname
+from employee e, project p, workon w
+where e.empid = w.empid 
+and   w.pid=p.pid 
+and lower(e.name)='chen'
+
+PNAME
+security system
+system development
+DB development
+Web development
+Wireless development
+network development
+
+
+13.	List the names that are shared among employees. 
+
+
+SELECT name
+FROM Employee
+GROUP BY name
+HAVING COUNT(name) > 1
+
+NAME
+peter
+smith
+joan
+kim
+
+
+14.	Run the following code to learn the use of concatenator ||  
+        Select 'employee ' || name || ' of Division '|| DID || ' earns $' || salary  AS "Employee Report"
+        From employee e
+        Order by did
+
+
+Select d.dname || ' division: total employee salary $' || sum(e.salary) AS "Divisional Expense" from division d, employee e 
+where d.did = e.did
+group by (d.dname)
+
+UNION
+
+Select d.dname || ' division: total project budget $' || sum(p.budget) AS "Divisional Expense" from division d, project p 
+where d.did = p.did
+group by d.dname
+
+UNION
+
+Select distinct('accounting') || ' division: total project budget $' || '0' AS "Divisional Expense" from division d, project p 
+where d.did = p.did
+
+Divisional Expense
+Research and development division: total employee salary $482000
+Research and development division: total project budget $6000
+accounting division: total employee salary $301000
+accounting division: total project budget $0
+engineering division: total employee salary $495000
+engineering division: total project budget $12000
+human resource division: total employee salary $157000
+human resource division: total project budget $5000
+marketing division: total employee salary $322000
+marketing division: total project budget $14000
+
+
+15.	(a) Use INTERSECT operation to list the name of project chen and larry both work on. 
+
+Select p.pname
+from project p
+join workon w on p.pid = w.pid
+join employee e on w.empid = e.empid
+where lower(e.name) = 'chen'
+Intersect
+Select pr.pname
+from project pr
+join workon wo on pr.pid = wo.pid
+join employee emp on wo.empid = emp.empid
+where lower(emp.name) = 'larry'
+
+PNAME
+Wireless development
+network development
+security system
+
+
+(b)	Use MINUS operation to list the name of the project Chen works on but Larry does not.
+
+Select p.pname
+from project p
+join workon w on p.pid = w.pid
+join employee e on w.empid = e.empid
+where lower(e.name) = 'chen'
+Minus
+Select pr.pname
+from project pr
+join workon wo on pr.pid = wo.pid
+join employee emp on wo.empid = emp.empid
+where lower(emp.name) = 'larry'
+
+
+PNAME
+DB development
+Web development
+system development
+
+
+
+
+
+
