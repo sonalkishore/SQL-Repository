@@ -1,0 +1,301 @@
+Formulate the following 15 queries: (note, for some queries, you may need to use the combination of join and subquery or correlated subquery, together with group by and having clauses). 
+1.	List name of projects sponsored by Chen’s division (hint/think: find a project whose DID equals to the DID of the employee ‘Chen’). 
+
+select pname
+from project
+where did = (select did
+                            from employee 
+                            where lower(name) = 'chen')
+
+PNAME
+Wireless development
+system development
+
+
+
+________________________________________
+2.	List the total number of projects 'accounting' division manager works on. (Note, if an employee is a division's manager, his/her empID is IN the Division table. If an employee works on a project, then his/her empid is IN Workon table)
+ Select count(pid) as total_projects
+from workon
+where empid = (Select managerid
+                             from division 
+                              where lower(dname) = 'accounting')
+TOTAL_PROJECTS
+3
+
+________________________________________
+3.	 List the name of the employee who works with Chen on some project(s) but not from chen’s division (hint: use conditions such as e1.did <> e2.did , e2.name = ‘chen’). 
+select distinct(e.name)
+FROM Employee e, Workon w 
+where e.empID = w.EmpID and e.name in (SELECT e1.name
+                FROM employee e1, Employee e2
+                 where e1.did<> e2.did and lower(e2.name) = 'chen' and lower (e1.name)<> 'chen')
+
+
+
+NAME
+Sandra
+Joe
+sam
+Julia
+larry
+harry
+peter
+Alan
+Steve
+grace
+smith
+Justin
+Phil
+kevin
+kim
+brian
+karl
+Marilyn
+
+
+________________________________________
+
+4.	List the name of the project sponsored by Kevin's division but Kevin does not work on. (hint: use NOT IN )
+
+Select p.pname
+from project p
+where p.did not in(SELECT e.DID
+                                FROM Employee e, workon w 
+                                 where e.empid = w.empid and lower(e.name)= 'kevin')
+
+
+
+
+PNAME
+security system
+Web development
+system development
+Wireless development
+________________________________________
+5.	List the name of employee who is working on the project with budget below the divisional average project budget (use correlated subquery).
+select e.name
+from employee e, workon w, project p
+where e.empid= w.empid and p.pid=w.pid and p.budget < (select avg(p2.budget)
+                                                                                                          from Project p2
+                                                                                                            where p2.did = p.did)
+
+NAME
+brian
+larry
+peter
+peter
+smith
+chen
+joan
+Justin
+Kristie
+Phil
+Sandra
+karl
+grace
+brian
+larry
+peter
+chen
+austin
+sam
+Alex
+Jenna
+Alan
+Julia
+Sandra
+Joe
+________________________________________
+6.	List the name of project and total number of employee(s) who are working on it but make less than their divisional average salary (use correlated subquery). 
+select p.pname, count(w.empid)
+from employee e, workon w, project p
+where e.empid= w.empid and p.pid=w.pid and e.salary < (select avg(e2.salary)
+                                                                                                      from employee e2
+                                                                                                       where e2.did = e.did)
+group by p.pname
+
+PNAME	COUNT(W.EMPID)
+DB development	4
+security system	3
+network development	6
+Wireless development	4
+system development	2
+Web development	5
+________________________________________
+7.	List the total number of divisions that have 4 or more employees working on projects. For this query I built a framework of the code, you may fill in the right code in ____, and then run the code to get the result. (Note, you need to use the keyword DISTINCT somewhere in this code, think why).
+     select count(did)
+     from _____
+     where did in
+         (select ____
+          from ___ , _____
+          where _______
+          group by ___
+          having ________ )
+
+select count(did)
+ from division
+  where did in
+  (select count(e.did)
+  from employee e, workon w
+  where e.empid=w.empid
+  group by e.did
+ having count(distinct e.empid) >=4)
+ 
+We need to use Distinct empid as one employee can work on several project. To avoid counting the same division multiple times if it has multiple employees working on the same project.
+________________________________________
+
+8.	List the name of the employees and his/her DID, who spend more time working on projects than all of his/her divisional colleagues. List the total hours he/she spent on projects. Also show his/her manager’s total project hours (hint use a correlated subquery at outer Select clause). 
+ 
+Select e.empid, e.name, e.did, SUM(w.hours) as total_hours_spent,
+(select SUM(w2.hours) from workon w2, employee e2 where w2.EmpID = e2.empID and e2.did = e.did
+          AND e2.empID = (select managerID FROM Division d WHERE d.did = e.did)) as manager_total_hours
+from employee e, workon w where e.empid = w.empid
+group by e.empid, e.name, e.did
+having SUM(w.hours) > ALL (select SUM(w1.hours)
+                          from workon w1, Employee e1 
+                          where w1.empid = e1.empid and e1.did = e.did and e1.empid <> e.empid
+                          group by e1.empid)
+
+EMPID	NAME	DID	TOTAL_HOURS_SPENT	MANAGER_TOTAL_HOURS
+6	peter	2	165	30
+3	brian	3	300	300
+8	smith	4	120	30
+9	chen	1	180	-
+4	larry	5	105	105
+
+________________________________________
+9.	List the ID and the name of the division that has more than one employee whose salary is greater than the divisional average salary.  (hint: correlated subquery, group by, having). Also show the count of such employees of each division and divisional average salary by the side of division name (Hint: use subquery at outer Select clause) .  Note, if you do not use DID in group by clause, you may encouter error - think why.
+
+Select d.did, d.dname, 
+       (Select round(AVG(e.salary)) from Employee e where e.did = d.did) AS divisional_avg_salary,
+       COUNT(e.empid) AS num_employees_above_avg
+from division d, employee e 
+where e.DID = d.DID and e.salary > (SELECT AVG(e1.salary) FROM Employee e1 WHERE e1.DID = d.DID)
+GROUP BY d.DID, d.dname
+HAVING COUNT(e.empID) > 1
+
+If we do not use group by we encounter error because group by ensures that we are aggregating the results by each division. Without grouping by d.did, the SQL wouldn't know how to aggregate the data for each division
+
+DID	DNAME	DIVISIONAL_AVG_SALARY	NUM_EMPLOYEES_ABOVE_AVG
+1	engineering	55000	3
+4	Research and development	68857	5
+5	accounting	60200	2
+2	marketing	53667	3
+
+
+________________________________________
+10. List the name of the employee that has the lowest salary in his division and list the total number of projects this employee is work on  (use correlated subquery, note some employee may not work on any project)
+
+Select e.name, count(w.pid) as total_projects, did
+from employee e, workon w
+where e.empid = w.empid and e.salary = (Select MIN(e2.salary) from employee e2 where e2.did = e.did)
+group by e.name, did
+
+NAME	TOTAL_PROJECTS	DID
+brian	4	3
+smith	4	4
+kevin	1	2
+________________________________________
+11.	List the name of employees who works on more projects than his/her divisional manager (hint: you need to use DID in Group By clause otherwise syntax error occurs – think why)  
+
+Select e.name
+from employee e, workon w 
+where e.empid = w.empid
+group by e.name, e.did
+having count(w.PID) > all (select count(w1.pid)
+                      from workon w1, employee e1, division d
+                      where w1.empid = e1.empid and e1.empid = d.managerid and e1.did = e.did)
+
+We need to group by division (DID) to ensure that we're calculating the total projects per division, and the comparison is made within the same division.
+NAME
+chen
+Joe
+peter
+Nacy
+smith
+austin
+Alex
+grace
+Alan
+Julia
+joan
+Justin
+Kristie
+Phil
+Jenna
+Sandra
+________________________________________
+12.	List the name of division (d) that has employee(s) who works on a project (p) not sponsored by this division. ((Use EXISTS with a correlated subquery (d.did <> p.did, e.did  = d.did) ) 
+
+Select dname
+from division d
+where EXISTS (select *
+             from employee e, Workon w, Project p 
+             where e.empid = w.empid and w.pid = p.pid and e.did = d.did and p.did <> d.did)
+DNAME
+engineering
+marketing
+human resource
+Research and development
+accounting
+________________________________________
+13   List name and salary of a manager who does not work on a project and makes less than his/her divisional average salary. Also list the divisional average salary. 
+
+Select e.name, e.salary, (Select AVG(e.salary) from Employee e where e.did = d.did) AS divisional_avg_salary 
+from employee e, division d 
+where e.empid = d.managerid and e.empid NOT IN (select w.empid from workon w)
+and e.salary<(select avg (e1.salary) from employee e1 where e1.did=e.did)
+
+NAME	SALARY	DIVISIONAL_AVG_SALARY
+joan	42000	55000
+
+
+________________________________________
+14.  List name of division that ALL its employees work on some project(s). You are required to use NOT EXISTS with correlated subquery (hint, given a division D, there not exist an employee E who does not work on project. If an employee’s empid is NOT IN workon table, then s/he  does not work on project).
+
+Select d.dname
+from division d
+where NOT EXISTS (select *   
+                from employee e
+                where e.did = d.did
+                and e.empid NOT IN (select w.empid from workon w))
+
+DNAME
+marketing
+Research and development
+________________________________________
+
+15.a)  Self-learning the SQL Case Expression at: https://www.w3schools.com/sql/sql_case.asp
+      b). run the following code and elaborate the meaning and logic of this code with a few sentences.
+SELECT empID, name, salary, (select count(*) from workon w where w.empid = e.empid) as ProjCt,
+CASE
+    WHEN (select count(*) from workon w where w.empid = e.empid) < 2  and salary > 65000 THEN 'send alert'    
+    WHEN (select count(*) from workon w where w.empid = e.empid) > 2  and salary < 40000 Then 'promotion'
+    ELSE 'no change'
+    END AS Decision
+FROM employee e
+1.	The case statement evaluates conditions for each employee and determines the decision based on the number of projects they are working on and their salary.
+2.	WHEN (select count(*) from workon w where w.empid = e.empid) < 2  and salary > 65000 THEN 'send alert' :    this means if the employee is working on less than 2 projects and has a salary greater than 65k, the decision is 'send alert'.
+3.	WHEN (select count(*) from workon w where w.empid = e.empid) > 2  and salary < 40000 Then 'promotion':     this means if the employee is working on more than 2 projects and has a salary less than 40k, the decision is 'promotion'.
+4.	ELSE 'no change':         this means if the above conditions are not met, the decision is 'no change'.
+
+    c)  Use what you learn from step a and b as a template, write a SQL statement to list the project (project name, its budget) , total number of employee who work on this project. Also, if there are more than 12 people working on it the show ' increase budget' in the result, If there are less than 7 people working on it then show 'decrease budget'. otherwise show 'no budget change'  
+ SELECT p.pid, p.pname, p.budget,(select count(*) from workon w where w.pid = p.pid) as "total employee",
+CASE
+    WHEN (select count(*) from workon w where w.pid = p.pid) > 12 THEN 'increase budget'    
+    WHEN (select count(*) from workon w where w.pid = p.pid) < 7 THEN 'decrease budget'
+    ELSE 'no budget change'
+    END AS "change in budget"
+from project p
+
+
+
+PID	PNAME	BUDGET	total employee	change in budget
+1	DB development	8000	8	no budget change
+2	network development	6000	13	increase budget
+3	Web development	5000	11	no budget change
+4	Wireless development	5000	12	no budget change
+5	security system	6000	6	decrease budget
+6	system development	7000	6	decrease budget
+
